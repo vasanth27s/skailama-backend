@@ -1,37 +1,58 @@
-const mongoose = require("mongoose");
+// server.js
 const express = require("express");
-const bodyParser = require('body-parser');
+const mongoose = require("mongoose");
+const bodyParser = require("body-parser");
 const cors = require("cors");
 
-const projectRoutes = require('./routes/projectRoutes');
-const userRoutes = require('./routes/userRoutes');
-const episodeRoutes = require('./routes/episodeRoutes');
-
 const app = express();
-
-app.use(cors());
 app.use(bodyParser.json());
-
-app.use('/projects', projectRoutes);
-app.use('/user', userRoutes);
-app.use('/episodes', episodeRoutes);
-
-const mongoURI = process.env.NODE_ENV === "users" ? process.env.MONGO_URI_PROD : "mongodb://localhost:27017/skailama";
-
-mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true });
-const db = mongoose.connection;
-db.on("error", console.error.bind(console, "MongoDB connection error:"));
-db.once("open", () => {
-  console.log("Connected to MongoDB");
-});
-
-app.get("/", (req, res) => {
-  res.json({
-    hello: "welcome User",
-  });
-});
+app.use(cors());
 
 const PORT = process.env.PORT || 3004;
+const MONGODB_URI = "mongodb://localhost:27017/skailama"; 
+
+mongoose.connect(MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
+
+const userSchema = new mongoose.Schema({
+  email: { type: String, required: true },
+});
+
+const projectSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+});
+
+const User = mongoose.model("User", userSchema);
+const Project = mongoose.model("Project", projectSchema);
+
+app.post("/user", async (req, res) => {
+  try {
+    const { email } = req.body;
+    let user = await User.findOne({ email });
+    if (!user) {
+      user = new User({ email });
+      await user.save();
+    }
+    res.status(201).json({ user });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.post("/project", async (req, res) => {
+  try {
+    const { name, userId } = req.body;
+    const project = new Project({ name, userId });
+    await project.save();
+    res.status(201).json({ project });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 app.listen(PORT, () => {
-  console.log(`Server started on port ${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
