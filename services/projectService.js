@@ -1,17 +1,8 @@
-
 const Project = require('../models/Project');
 const User = require('../models/User');
-
-const episodeService = require('./episodeService.js');
-
+const episodeService = require('./episodeService');
 
 class ProjectService {
-  async createProject(projectName) {
-    const project = new Project({ projectName });
-    await project.save();
-    return project;
-  }
-
   async createProjectForUser(userId, projectName) {
     const user = await User.findById(userId);
     if (!user) {
@@ -28,37 +19,15 @@ class ProjectService {
   }
 
   async getAllProjects(userId) {
-    try {
-      const user = await User.findById(userId).populate({
-        path: 'projects',
-        populate: {
-          path: 'episodes',
-          
-        },
-      });
-      if (!user) {
-        throw new Error('User not found');
-      }
-
-      return user.projects;
-    } catch (error) {
-      console.error('Error fetching projects:', error.message);
-      throw new Error('Internal Server Error');
+    const user = await User.findById(userId).populate({
+      path: 'projects',
+      populate: { path: 'episodes' }
+    });
+    if (!user) {
+      throw new Error('User not found');
     }
-  }
 
-  async createEpisodeAndLinkToProject(projectId, episodeData) {
-    try {
-      const newEpisode = await episodeService.createEpisode(episodeData);
-  
-      const project = await Project.findById(projectId);
-      project.episodes.push(newEpisode._id);
-      await project.save();
-  
-      return project;
-    } catch (error) {
-      throw error;
-    }
+    return user.projects;
   }
 }
 
